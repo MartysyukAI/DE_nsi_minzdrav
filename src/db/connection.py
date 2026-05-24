@@ -1,15 +1,13 @@
-import os
 import psycopg
-from dotenv import load_dotenv
-
-load_dotenv()
+from src.settings import Settings
 
 
 def get_connection():
+
     return psycopg.connect(
-    host=os.getenv("POSTGRES_HOST"),
-    port=os.getenv("POSTGRES_PORT"),
-    dbname=os.getenv("POSTGRES_DB"),
-    user=os.getenv("POSTGRES_USER"),
-    password=os.getenv("POSTGRES_PASSWORD"),       
+        host=Settings.POSTGRES_HOST,
+        port=Settings.POSTGRES_PORT,
+        dbname=Settings.POSTGRES_DB,
+        user=Settings.POSTGRES_USER,
+        password=Settings.POSTGRES_PASSWORD
     )

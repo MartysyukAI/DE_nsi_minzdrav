@@ -1,71 +1,46 @@
-import os
-import zipfile
-from io import BytesIO
-import xml.etree.ElementTree as ET
 import requests
-from dotenv import load_dotenv
+import urllib3
+import zipfile
+import json
+from io import BytesIO
 
-load_dotenv()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class NSIClient:
 
-    def __init__(self):
+    def __init__(self, base_url: str):
+        self.base_url = base_url
 
-        self.base_url = os.getenv('API_BASE_URL')
-        self.token = os.getenv('API_TOKEN')
-        self.oid = os.getenv('NSI_OID')
+    def get_filename(self, oid: str, version: str, file_format: str = 'json') -> str:
+        url = f'{self.base_url}/api/dataFiles'
 
-        self.session = requests.Session()
-
-        self.session.headers.update(
-            {
-                'X-Oncor-API-Token': self.token
-            }
-        )
-
-    def get_passport(self):
-
-        url = (
-            f'{self.base_url}'
-            f'/api/1.0/json/nsi.rosminzdrav.ru/passport'
-        )
-
-        response = self.session.get(
+        response = requests.get(
             url,
-            params={'oid': self.oid},
-            timeout=30,
-#            verify=False
+            params={
+                'identifier': oid,
+                'version': version,
+                'format': file_format
+            },
+            verify=False,
+            timeout=60
         )
-
         response.raise_for_status()
-
-        return response.json()
+        return response.json()[0]
     
-    def download_zip(self):
+    def download_zip(self, filename: str) -> bytes:
 
-        url = (
-            f'{self.base_url}'
-            f'/api/1.0/json/nsi.rosminzdrav.ru/zip'
-        )
+        url = f'{self.base_url}/api/dataFiles/{filename}'
 
-        response = self.session.get(
-            url,
-            params={'oid': self.oid},
-            timeout=60,
-        )
+        response = requests.get(url, verify=False, timeout=120)
 
         response.raise_for_status()
-
         return response.content
     
-    def extract_xml_root(self, zip_content: bytes):
+    def extract_json(self, zip_bytes: bytes) -> dict:
 
-        with zipfile.ZipFile(BytesIO(zip_content)) as archive:
-            xml_files = [f for f in archive.namelist() if f.endswith('.xml')]
-            xml_filename = xml_files[0]
-            with archive.open(xml_filename) as xml_file:
-                tree = ET.parse(xml_file)
+        with zipfile.ZipeFile(BytesIO(zip_bytes)) as z:
+            json_file = z.namelist()[0]
 
-                return tree.getroot()
-            
+            with z.open(json_file) as f:
+                return json.load(f)

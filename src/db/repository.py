@@ -1,44 +1,73 @@
-from psycopg.rows import dict_row
-
 from src.db.connection import get_connection
 
 
-def insert_records(records: list[dict]):
+class MedicalOrganizationRepository:
 
-    query = """
+    INSERT_SQL = """
     INSERT INTO nsi.raw_medical_organizations (
         record_hash,
-        organization_id,
+        org_id,
+        oid,
         full_name,
         short_name,
-        ogrn,
         inn,
+        kpp,
+        ogrn,
         address,
-        department_id,
-        registry_inclusion_date,
+        region_id,
+        region_name,
+        medical_subject_name,
+        organization_type,
+        mo_dept_id,
+        mo_dept_name,
+        create_date,
+        modify_date,
+        delete_date,
+        delete_reason,
         source_version,
+        record_source,
         raw_payload
     )
     VALUES (
         %(record_hash)s,
-        %(organization_id)s,
+        %(org_id)s,
+        %(oid)s,
         %(full_name)s,
         %(short_name)s,
-        %(ogrn)s,
         %(inn)s,
+        %(kpp)s,
+        %(ogrn)s,
         %(address)s,
-        %(department_id)s,
-        %(registry_inclusion_date)s,
+        %(region_id)s,
+        %(region_name)s,
+        %(medical_subject_name)s,
+        %(organization_type)s,
+        %(mo_dept_id)s,
+        %(mo_dept_name)s,
+        %(create_date)s,
+        %(modify_date)s,
+        %(delete_date)s,
+        %(delete_reason)s,
         %(source_version)s,
-        %(raw_payload)s
+        %(record_source)s,
+        %(raw_payload)s::jsonb
     )
     ON CONFLICT (record_hash) DO NOTHING
     """
 
-    with get_connection() as conn:
+    def insert_records(self, records: list[dict], batch_size: int = 2000):
 
-        with conn.cursor(row_factory=dict_row) as cur:
+        total = len(records)
 
-            cur.executemany(query, records)
+        with get_connection() as conn:
+            with conn.cursor() as cur:
 
-        conn.commit()
+                for i in range(0, total, batch_size):
+
+                    batch = records[i:i + batch_size]
+
+                    cur.executemany(self.INSERT_SQL, batch)
+
+                    conn.commit()
+
+                    print(f"[LOAD] {min(i+batch_size, total)}/{total}")

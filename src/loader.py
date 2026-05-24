@@ -1,74 +1,35 @@
-import json
-
 from src.api.client import NSIClient
-from src.db.repository import insert_records
-from src.utils.hashing import generate_record_hash
-
-
-def parse_records(root):
-
-    records = []
-
-    for element in root.findall(".//record"):
-
-        organization_id = element.findtext("id")
-
-        source_version = CURRENT_VERSION
-
-        record = {
-            "record_hash": generate_record_hash(
-                organization_id,
-                source_version,
-            ),
-
-            "organization_id": organization_id,
-
-            "full_name": element.findtext("fullName"),
-
-            "short_name": element.findtext("shortName"),
-
-            "ogrn": element.findtext("ogrn"),
-
-            "inn": element.findtext("inn"),
-
-            "address": element.findtext("address"),
-
-            "department_id": element.findtext("departmentId"),
-
-            "registry_inclusion_date":
-                element.findtext("registryInclusionDate"),
-
-            "source_version": source_version,
-
-            "raw_payload": json.dumps({
-                child.tag: child.text
-                for child in element
-            }),
-        }
-
-        records.append(record)
-
-    return records
+from src.db.repository import MedicalOrganizationRepository
+from src.etl.transformer import transform
+from src.settings import Settings
 
 
 def main():
 
-    client = NSIClient()
+    client = NSIClient(Settings.NSI_BASE_URL)
+    repository = MedicalOrganizationRepository()
 
-    passport = client.get_passport()
+    print("STEP 1: get filename")
+    filename = client.get_filename(Settings.NSI_OID, Settings.NSI_VERSION)
+    print("ZIP filename:", filename)
 
-    global CURRENT_VERSION
-    CURRENT_VERSION = passport["version"]
+    print("STEP 2: download zip")
+    zip_bytes = client.download_zip(filename)
+    print("ZIP size:", len(zip_bytes))
 
-    zip_content = client.download_zip()
+    print("STEP 3: extract json")
+    data = client.extract_json(zip_bytes)
+    records = data["records"]
+    print("Records extracted:", len(records))
 
-    root = client.extract_xml_root(zip_content)
+    print("STEP 4: transform")
+    transformed = [transform(r, Settings.NSI_VERSION) for r in records]
+    print("Records transformed:", len(transformed))
 
-    records = parse_records(root)
+    print("STEP 5: load to postgres")
+    repository.insert_records(transformed)
 
-    insert_records(records)
-
-    print(f"Loaded {len(records)} records")
+    print("DONE")
 
 
 if __name__ == "__main__":
