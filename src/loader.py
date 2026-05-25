@@ -1,14 +1,17 @@
+from datetime import date
+
 from src.api.client import NSIClient
 from src.db.repository import MedicalOrganizationRepository
 from src.etl.transformer import transform
 from src.settings import Settings
+from src.dv.service import DVService
 
 
 def main():
 
     client = NSIClient(Settings.NSI_BASE_URL)
-
     repository = MedicalOrganizationRepository()
+    dv = DVService()
 
     print('STEP 1: get filename')
 
@@ -42,9 +45,16 @@ def main():
 
     print('Records transformed:', len(transformed))
 
-    print('STEP 5: load to postgres')
+    print('STEP 5: load RAW to postgres')
 
     repository.insert_records(transformed)
+
+    print('STEP 6: build DATA VAULT 2.0')
+
+    load_date = date.today()
+
+    for r in transformed:
+        dv.process(r, load_date)
 
     print('DONE')
 
