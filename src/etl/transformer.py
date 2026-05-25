@@ -1,42 +1,62 @@
-from src.utils.hashing import make_md5
 from src.utils.address import build_address
+from src.utils.hashing import generate_record_hash
 from src.utils.parsing import parse_date
 
 
 def transform(record: dict, version: str) -> dict:
 
     return {
-        "record_hash": make_md5(record["oid"], version),
 
-        "org_id": record.get("oid"),
+        'raw_record_hash': generate_record_hash(
+            record['oid'],
+            version
+        ),
 
-        "oid": record.get("oid"),
+        'source_record_id': record.get('id'),
 
-        "full_name": record.get("nameFull"),
-        "short_name": record.get("nameShort"),
+        'org_id': record.get('oid'),
 
-        "inn": record.get("inn"),
-        "kpp": record.get("kpp"),
-        "ogrn": record.get("ogrn"),
+        'full_name': record.get('nameFull'),
+        'short_name': record.get('nameShort'),
 
-        "address": build_address(record),
+        'inn': record.get('inn'),
+        'kpp': record.get('kpp'),
+        'ogrn': record.get('ogrn'),
 
-        "region_id": record.get("regionId"),
-        "region_name": record.get("regionName"),
+        'address': build_address(record),
 
-        "medical_subject_name": record.get("medicalSubjectName"),
-        "organization_type": record.get("organizationType"),
+        'region_id': str(record.get('regionId'))
+        if record.get('regionId') else None,
 
-        "mo_dept_id": record.get("moDeptId"),
-        "mo_dept_name": record.get("moDeptName"),
+        'region_name': record.get('regionName'),
 
-        "create_date": parse_date(record.get("createDate")),
-        "modify_date": parse_date(record.get("modifyDate")),
-        "delete_date": parse_date(record.get("deleteDate")),
-        "delete_reason": record.get("deleteReason"),
+        'medical_subject_name': record.get('medicalSubjectName'),
 
-        "source_version": version,
-        "record_source": "nsi.rosminzdrav.ru",
+        'organization_type': str(record.get('organizationType'))
+        if record.get('organizationType') else None,
 
-        "raw_payload": record
+        'mo_dept_id': str(record.get('moDeptId'))
+        if record.get('moDeptId') else None,
+
+        'mo_dept_name': record.get('moDeptName'),
+
+        'create_date': parse_date(
+            record.get('createDate')
+        ),
+
+        'modify_date': parse_date(
+            record.get('modifyDate')
+        ),
+
+        'delete_date': parse_date(
+            record.get('deleteDate')
+        ),
+
+        'delete_reason': record.get('deleteReason'),
+
+        'raw_payload': record,
+
+        'source_version': version,
+
+        'record_source': 'nsi.rosminzdrav.ru'
     }

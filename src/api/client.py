@@ -3,7 +3,7 @@ import urllib3
 import zipfile
 import json
 from io import BytesIO
-
+# У NSI API предупреждения по надежности SSL сертификата
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
@@ -12,7 +12,7 @@ class NSIClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
 
-    def get_filename(self, oid: str, version: str, file_format: str = 'json') -> str:
+    def get_filename(self, oid: str, version: str, file_format: str = 'JSON') -> str:
         url = f'{self.base_url}/api/dataFiles'
 
         response = requests.get(
@@ -39,7 +39,7 @@ class NSIClient:
     
     def extract_json(self, zip_bytes: bytes) -> dict:
 
-        with zipfile.ZipeFile(BytesIO(zip_bytes)) as z:
+        with zipfile.ZipFile(BytesIO(zip_bytes)) as z:
             json_file = z.namelist()[0]
 
             with z.open(json_file) as f:
